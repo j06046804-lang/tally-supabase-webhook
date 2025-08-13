@@ -16,14 +16,32 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid Tally payload' });
     }
 
-    // Función para obtener el valor por label, incluyendo selección simple y múltiple
+    // Función mejorada para obtener valor real
     const getValue = (label) => {
       const field = data.fields.find(f => f.label.toLowerCase() === label.toLowerCase());
       if (!field) return null;
 
-      if (field.value !== undefined) return field.value; // texto
-      if (field.choice?.label) return field.choice.label; // selección simple
-      if (field.choices?.labels) return field.choices.labels.join(', '); // selección múltiple
+      // Texto libre
+      if (field.value !== undefined && typeof field.value === 'string') return field.value;
+
+      // Selección simple
+      if (field.choice) {
+        return field.choice.label || field.choice.value || null;
+      }
+
+      // Selección múltiple
+      if (field.choices && Array.isArray(field.choices)) {
+        return field.choices
+          .map(c => c.label || c.value)
+          .filter(v => v)
+          .join(', ');
+      }
+
+      // Otra forma que envía Tally: choices.labels
+      if (field.choices?.labels) {
+        return field.choices.labels.join(', ');
+      }
+
       return null;
     };
 
