@@ -1,45 +1,55 @@
-import { createClient } from '@supabase/supabase-js';
+// webhook.js
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+const supabaseUrl = process.env.SUPABASE_URL;
+const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
+  if (req.method !== "POST") {
+    return res.status(405).json({ message: "Método no permitido" });
   }
 
   try {
-    const { data } = req.body;
+    const data = req.body;
 
-    if (!data || !data.fields) {
-      return res.status(400).json({ error: 'Invalid Tally payload' });
-    }
-
-    // Función robusta para obtener texto visible de Tally
+    // Función para obtener el valor en texto
     const getValue = (label) => {
-      const field = data.fields.find(f => f.label.toLowerCase() === label.toLowerCase());
+      const field = data.fields.find(
+        (f) => f.label.trim().toLowerCase() === label.trim().toLowerCase()
+      );
       if (!field) return null;
 
       // Texto libre
-      if (field.value && typeof field.value === 'string') return field.value;
+      if (field.value && typeof field.value === "string") return field.value;
 
-      // Selección simple
-      if (field.choice && field.choice.label) return field.choice.label;
+      // Número
+      if (typeof field.value === "number") return field.value;
 
-      // Selección múltiple
+      // Selección única/múltiple con IDs
+      if (field.type === "MULTIPLE_CHOICE" && Array.isArray(field.value)) {
+        return field.value
+          .map((val) => {
+            const opt = field.options.find((o) => o.id === val);
+            return opt ? opt.text : val;
+          })
+          .filter(Boolean)
+          .join(", ");
+      }
+
+      // Checkboxes (opciones múltiples)
       if (field.choices && Array.isArray(field.choices)) {
         return field.choices
-          .map(c => c.label || c.value)
-          .filter(v => v)
-          .join(', ');
+          .map((c) => c.label || c.value)
+          .filter(Boolean)
+          .join(", ");
       }
 
       return null; // fallback
     };
 
-    // Mapear todas las respuestas del cuestionario
-    const mappedData = {
+    // Construimos el objeto a insertar
+    const payload = {
       nombre_encuestador: getValue('Nombre del encuestador'),
       nombre_encuestado: getValue('Nombre del encuestado'),
       fecha: getValue('Fecha'),
@@ -93,19 +103,19 @@ export default async function handler(req, res) {
     };
 
     // Insertar en Supabase
-    const { data: inserted, error } = await supabase
-      .from('Cuestionario_comportamiento_proambiental_autosustentabilidad')
-      .insert([mappedData])
-      .select();
+    const { error } = await supabase
+      .from("Encuestas_Completas")
+      .insert([payload]);
 
-    if (error) throw error;
+    if (error) {
+      console.error("Error al insertar en Supabase:", error);
+      return res.status(500).json({ message: "Error al guardar en Supabase" });
+    }
 
-    console.log('Datos insertados correctamente:', inserted);
-
-    return res.status(200).json({ message: 'Datos guardados', data: inserted });
-
+    return res.status(200).json({ message: "Datos guardados correctamente" });
   } catch (err) {
-    console.error('Error al insertar los datos:', err);
-    return res.status(500).json({ error: err.message });
+    console.error("Error en webhook:", err);
+    return res.status(500).json({ message: "Error interno del servidor" });
   }
 }
+
