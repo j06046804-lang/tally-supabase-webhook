@@ -1,94 +1,147 @@
-// pages/api/webhook.js
-import { createClient } from '@supabase/supabase-js';
+import express from "express";
+import { createClient } from "@supabase/supabase-js";
 
-const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-const supabase = createClient(supabaseUrl, supabaseKey);
+const app = express();
+app.use(express.json({ type: "*/*" })); // asegura parsear JSON
 
-export default async function handler(req, res) {
-  if (req.method !== 'POST') {
-    return res.status(405).json({ message: 'Method Not Allowed' });
-  }
+const supabase = createClient(
+  process.env.NEXT_PUBLIC_SUPABASE_URL,
+  process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
+);
 
-  try {
-    const { data } = req.body;
+// Mapea cada "key" de Tally -> nombre EXACTO de columna en Supabase
+const KEY_TO_COLUMN = {
+  // Datos personales
+  "question_bebVgZ": "Nombre del encuestador",
+  "question_Ap1Paz": "Nombre del encuestado",
+  "question_BpM46K": "Fecha",
+  "question_xDOxor": "Hora",
+  "question_ZOq5go": "Sexo",
+  "question_kGMage": "Edad",
+  "question_vDojgD": "Estado civil",
+  "question_LKR1Vp": "Grupo",
+  "question_po8x5B": "Subgrupo",
+  "question_KxdQOV": "Número de integrantes en la familia",
+  "question_0edMp0": "0 - 10 años",
+  "question_z7jza8": "11 - 25 años",
+  "question_5ZbkyP": "26 - 50 años",
+  "question_d9EA5y": "51 - 90 años",
 
-    if (!data || !data.fields) {
-      return res.status(400).json({ error: 'Invalid Tally payload' });
-    }
+  // Jefe del hogar
+  "question_MaoKPA": "Nivel de educación del jefe del hogar",
+  "question_Jl5KGR": "Situación laboral del jefe del hogar",
+  "question_gqKjg4": "Ingreso estimado mensual del jefe del hogar",
+  "question_y4VZgx": "Tipo de hogar",
 
-    // Diccionario para mapear las etiquetas de Tally a columnas de Supabase
-    const fieldMap = {
-      'Nombre del encuestador': 'Nombre del encuestador',
-      'Nombre del encuestado': 'Nombre del encuestado',
-      'Fecha': 'Fecha',
-      'Hora': 'Hora',
-      'Sexo': 'Sexo',
-      'Edad': 'Edad',
-      'Estado civil': 'Estado civil',
-      'Grupo': 'Grupo',
-      'Subgrupo': 'Subgrupo',
-      'Número de integrantes en la familia': 'Número de integrantes en la familia',
-      '0 - 10 años': '0 - 10 años',
-      '11 - 25 años': '11 - 25 años',
-      '26 - 50 años': '26 - 50 años',
-      '51 - 90 años': '51 - 90 años',
-      'Nivel de educación del jefe del hogar': 'Nivel de educación del jefe del hogar',
-      'Situación laboral del jefe del hogar': 'Situación laboral del jefe del hogar',
-      'Ingreso estimado mensual del jefe del hogar': 'Ingreso estimado mensual del jefe del hogar',
-      'Tipo de hogar': 'Tipo de hogar',
-      '¿Conoce lo que son los desechos sólidos domiciliarios?': '¿Conoce lo que son los desechos sólidos domiciliarios?',
-      '¿Cree usted que existe un comportamiento adecuado en el manejo de los desechos sólidos domiciliarios en la comunidad?': '¿Cree usted que existe un comportamiento adecuado en el manejo de los desechos sólidos domiciliarios en la comunidad?',
-      '¿Se debe separar los desechos sólidos según su origen?': '¿Se debe separar los desechos sólidos según su origen?',
-      '¿Es importante la correcta clasificación de los desechos sólidos orgánicos e inorgánicos en el hogar?': '¿Es importante la correcta clasificación de los desechos sólidos orgánicos e inorgánicos en el hogar?',
-      '¿Cree que el comportamiento de la comunidad influye en la acumulación de desechos?': '¿Cree que el comportamiento de la comunidad influye en la acumulación de desechos?',
-      '¿Dedica tiempo para reducir, reutilizar o reciclar?': '¿Dedica tiempo para reducir, reutilizar o reciclar?',
-      '¿Los desechos sólidos son un gran problema para su comunidad?': '¿Los desechos sólidos son un gran problema para su comunidad?',
-      '¿Le preocupa el exceso de desechos sólidos domiciliarios?': '¿Le preocupa el exceso de desechos sólidos domiciliarios?',
-      '¿Considera que los desechos contaminan el ambiente?': '¿Considera que los desechos contaminan el ambiente?',
-      '¿Le afecta emocionalmente cuando escucha noticias sobre la contaminación?': '¿Le afecta emocionalmente cuando escucha noticias sobre la contaminación?',
-      '¿Siente frustración debido a la falta de acciones ambientales?': '¿Siente frustración debido a la falta de acciones ambientales?',
-      '¿Considera importante pensar en el tipo de planeta que dejamos a futuras generaciones?': '¿Considera importante pensar en el tipo de planeta que dejamos a futuras generaciones?',
-      '¿Es consciente del impacto de los desechos sólidos en la salud y el ambiente?': '¿Es consciente del impacto de los desechos sólidos en la salud y el ambiente?',
-      '¿Investiga frecuentemente acerca de temas medio ambientales?': '¿Investiga frecuentemente acerca de temas medio ambientales?',
-      '¿Conoce las consecuencias de la acumulación de los desechos sólidos domiciliarios?': '¿Conoce las consecuencias de la acumulación de los desechos sólidos domiciliarios?',
-      '¿Conoce los beneficios de reutilizar un residuo domiciliario?': '¿Conoce los beneficios de reutilizar un residuo domiciliario?',
-      '¿La falta de información es un obstáculo para la correcta gestión de los residuos sólidos domiciliarios?': '¿La falta de información es un obstáculo para la correcta gestión de los residuos sólidos domiciliarios?',
-      '¿Los desechos orgánicos generados en el hogar pueden tener otra funcionalidad?': '¿Los desechos orgánicos generados en el hogar pueden tener otra funcionalidad?',
-      '¿La acumulación de desechos afectan a la salud de la población?': '¿La acumulación de desechos afectan a la salud de la población?',
-      '¿La reducción, reciclaje y la reutilización de los desechos sólidos puede cuidar al medio ambiente y a la vida silvestre?': '¿La reducción, reciclaje y la reutilización de los desechos sólidos puede cuidar al medio ambiente y a la vida silvestre?',
-      '¿Cree que la transformación de desechos sólidos en nuevos productos puede contribuir significativamente a la reducción de la generación de desechos?': '¿Cree que la transformación de desechos sólidos en nuevos productos puede contribuir significativamente a la reducción de la generación de desechos?',
-      '¿Necesita más información acerca de educación ambiental?': '¿Necesita más información acerca de educación ambiental?',
-      '¿En su hogar practica la separación de los desechos para el reciclaje y le representa algún ingreso?': '¿En su hogar practica la separación de los desechos para el reciclaje y le representa algún ingreso?',
-      '¿Los desechos sólidos generados en el hogar pueden ser reutilizados para una nueva función o creación de un producto?': '¿Los desechos sólidos generados en el hogar pueden ser reutilizados para una nueva función o creación de un producto?',
-      '¿Cree que el manejo adecuado de los desechos sólidos domiciliarios podría aportar al desarrollo económico comunitario?': '¿Cree que el manejo adecuado de los desechos sólidos domiciliarios podría aportar al desarrollo económico comunitario?',
-      '¿Los emprendimientos en base a la reutilización de los desechos aporta a su economía?': '¿Los emprendimientos en base a la reutilización de los desechos aporta a su economía?',
-      '¿El manejo adecuado de los desechos sólidos domiciliarios ofrece oportunidades para el emprendimiento?': '¿El manejo adecuado de los desechos sólidos domiciliarios ofrece oportunidades para el emprendimiento?',
-      '¿Es posible reducir la generación de residuos sólidos domiciliarios por medio de eventos de concientización?': '¿Es posible reducir la generación de residuos sólidos domiciliarios por medio de eventos de concientización?',
-      '¿Participaría en talleres de buenas prácticas y capacitaciones para el correcto manejo de los desechos sólidos domiciliarios?': '¿Participaría en talleres de buenas prácticas y capacitaciones para el correcto manejo de los desechos sólidos domiciliarios?',
-      '¿El manejo adecuado de los desechos sólidos domiciliarios puede tener un impacto significativo al medio ambiente?': '¿El manejo adecuado de los desechos sólidos domiciliarios puede tener un impacto significativo al medio ambiente?',
-      '¿Está dispuesto a participar en un emprendimiento en base al uso de los desechos sólidos?': '¿Está dispuesto a participar en un emprendimiento en base al uso de los desechos sólidos?',
-      '¿Participaría a una feria de emprendimientos comunitarios en base a desechos domiciliarios reutilizados?': '¿Participaría a una feria de emprendimientos comunitarios en base a desechos domiciliarios reutilizados?'
-    };
+  // Preguntas (nota: algunos labels de Tally no coinciden; aquí forzamos al nombre de la columna)
+  "question_XoZl9Y": "¿Conoce lo que son los desechos sólidos domiciliarios?",
+  "question_8L7o2P": "¿Cree usted que existe un comportamiento adecuado en el manejo de los desechos sólidos domiciliarios en la comunidad?",
+  "question_08NrGj": "¿Se debe separar los desechos sólidos según su origen?",
+  "question_zMPXg0": "¿Es importante la correcta clasificación de los desechos sólidos orgánicos e inorgánicos en el hogar?",
+  "question_59WKrE": "¿Cree que el comportamiento de la comunidad influye en la acumulación de desechos?",
+  "question_d0BqgK": "¿Dedica tiempo para reducir, reutilizar o reciclar?",
+  "question_YGNDeJ": "¿Los desechos sólidos son un gran problema para su comunidad?",
+  "question_Dpg2bZ": "¿Le preocupa el exceso de desechos sólidos domiciliarios?",
+  "question_lOJDgv": "¿Considera que los desechos contaminan el ambiente?",
+  "question_RoEK2j": "¿Le afecta emocionalmente cuando escucha noticias sobre la contaminación?",
+  "question_oRX6gx": "¿Siente frustración debido a la falta de acciones ambientales?",
+  "question_Gp8vkk": "¿Considera importante pensar en el tipo de planeta que dejamos a futuras generaciones?",
+  "question_OXO1rg": "¿Es consciente del impacto de los desechos sólidos en la salud y el ambiente?",
+  "question_VP2Eqy": "¿Investiga frecuentemente acerca de temas medio ambientales?",
+  "question_P9Vj4e": "¿Conoce las consecuencias de la acumulación de los desechos sólidos domiciliarios?",
+  "question_ElyzAr": "¿Conoce los beneficios de reutilizar un residuo domiciliario?",
+  "question_rOzygR": "¿La falta de información es un obstáculo para la correcta gestión de los residuos sólidos domiciliarios?",
+  "question_47eXEY": "¿Los desechos orgánicos generados en el hogar pueden tener otra funcionalidad?",
+  "question_jo1Dg4": "¿La acumulación de desechos afectan a la salud de la población?",
+  "question_2AQ8V9": "¿La reducción, reciclaje y la reutilización de los desechos sólidos puede cuidar al medio ambiente y a la vida silvestre?",
+  "question_xDOxg5": "¿Cree que la transformación de desechos sólidos en nuevos productos puede contribuir significativamente a la reducción de la generación de desechos?",
+  "question_RoEK29": "¿Necesita más información acerca de educación ambiental?",
+  "question_oRX6gP": "¿En su hogar practica la separación de los desechos para el reciclaje y le representa algún ingreso?",
+  "question_Gp8vkZ": "¿Los desechos sólidos generados en el hogar pueden ser reutilizados para una nueva función o creación de un producto?",
+  "question_OXO1rR": "¿Cree que el manejo adecuado de los desechos sólidos domiciliarios podría aportar al desarrollo económico comunitario?",
+  "question_VP2Eqg": "¿Los emprendimientos en base a la reutilización de los desechos aporta a su economía?",
+  "question_P9Vj4V": "¿El manejo adecuado de los desechos sólidos domiciliarios ofrece oportunidades para el emprendimiento?",
+  "question_ElyzA4": "¿Es posible reducir la generación de residuos sólidos domiciliarios por medio de eventos de concientización?",
+  "question_rOzygN": "¿Participaría en talleres de buenas prácticas y capacitaciones para el correcto manejo de los desechos sólidos domiciliarios?",
+  "question_47eXqX": "¿El manejo adecuado de los desechos sólidos domiciliarios puede tener un impacto significativo al medio ambiente?",
+  "question_jo1Dpa": "¿Está dispuesto a participar en un emprendimiento en base al uso de los desechos sólidos?",
+  "question_2AQ8Zj": "¿Participaría a una feria de emprendimientos comunitarios en base a desechos domiciliarios reutilizados?"
+};
 
-    // Extraer los valores del payload de Tally
-    const insertData = {};
-    for (const [label, column] of Object.entries(fieldMap)) {
-      const field = data.fields.find(f => f.label.trim().toLowerCase() === label.trim().toLowerCase());
-      insertData[column] = field ? field.value : null;
-    }
+// Convierte MULTIPLE_CHOICE de IDs -> texto(s)
+function toTextFromOptions(field) {
+  if (!field) return null;
+  // Si no hay opciones o el value no es array, devolvemos tal cual
+  if (!Array.isArray(field.value)) return field.value ?? null;
+  if (!Array.isArray(field.options)) return field.value.join(", ");
 
-    const { data: inserted, error } = await supabase
-      .from('Cuestionario_comportamiento_proambiental_autosustentabilidad')
-      .insert([insertData])
-      .select();
+  const texts = field.value
+    .map((id) => field.options.find((o) => o.id === id)?.text)
+    .filter(Boolean);
 
-    if (error) throw error;
-
-    return res.status(200).json({ message: 'Datos guardados correctamente', data: inserted });
-
-  } catch (err) {
-    console.error('Error inserting data:', err);
-    return res.status(500).json({ error: err.message });
-  }
+  // Si no encontró textos, devuelve IDs; si sí, devuelve textos unidos
+  return texts.length ? texts.join(", ") : field.value.join(", ");
 }
+
+// Normaliza hora a HH:MM:SS
+function normalizeTime(val) {
+  if (!val || typeof val !== "string") return val ?? null;
+  // "12:14" -> "12:14:00"
+  if (/^\d{2}:\d{2}$/.test(val)) return `${val}:00`;
+  return val;
+}
+
+app.get("/", (_req, res) => {
+  res.send("OK");
+});
+
+app.post("/webhook/tally", async (req, res) => {
+  try {
+    const payload = req.body;
+
+    // Seguridad opcional: valida que venga de Tally (puedes agregar un header secreto)
+    // if (req.headers['x-tally-signature'] !== process.env.TALLY_SECRET) { ... }
+
+    const fields = payload?.data?.fields || [];
+    const row = {};
+
+    for (const f of fields) {
+      const column = KEY_TO_COLUMN[f.key];
+      if (!column) continue; // ignorar campos no mapeados
+
+      let value = null;
+      switch (f.type) {
+        case "MULTIPLE_CHOICE":
+          value = toTextFromOptions(f);
+          break;
+        case "INPUT_TIME":
+          value = normalizeTime(f.value);
+          break;
+        default:
+          value = f.value ?? null;
+      }
+
+      row[column] = value;
+    }
+
+    // Insertar en Supabase
+    const { data, error } = await supabase
+      .from("Cuestionario_comportamiento_proambiental_autosustentabilidad")
+      .insert([row]);
+
+    if (error) {
+      console.error("Supabase insert error:", error);
+      return res.status(500).json({ ok: false, error });
+    }
+
+    return res.status(200).json({ ok: true, inserted: data });
+  } catch (e) {
+    console.error("Webhook error:", e);
+    return res.status(500).json({ ok: false, error: e?.message || "Error" });
+  }
+});
+
+const PORT = process.env.PORT || 8080;
+app.listen(PORT, () => {
+  console.log(`Listening on :${PORT}`);
+});
