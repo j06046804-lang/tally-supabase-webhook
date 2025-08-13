@@ -49,7 +49,7 @@ export default async function handler(req, res) {
         "¿Es consciente del impacto de los desechos sólidos en la salud y el ambiente?": body.data?.['¿Es consciente del impacto de los desechos sólidos en la salud y el ambiente?'] || null,
         "¿Investiga frecuentemente acerca de temas medio ambientales?": body.data?.['¿Investiga frecuentemente acerca de temas medio ambientales?'] || null,
         "¿Conoce las consecuencias de la acumulación de los desechos sólidos domiciliarios?": body.data?.['¿Conoce las consecuencias de la acumulación de los desechos sólidos domiciliarios?'] || null,
-        "¿Conoce los beneficios de reutilizar un residuo domiciliario?": body.data?.['¿Conoce los beneficios de reutilizar un residuo domiciliario?'] || null,
+        "¿Conoce los beneficios de reutilizar un residuo domiciliarios?": body.data?.['¿Conoce los beneficios de reutilizar un residuo domiciliario?'] || null,
         "¿La falta de información es un obstáculo para la correcta gestión de los residuos sólidos domiciliarios?": body.data?.['¿La falta de información es un obstáculo para la correcta gestión de los residuos sólidos domiciliarios?'] || null,
         "¿Los desechos orgánicos generados en el hogar pueden tener otra funcionalidad?": body.data?.['¿Los desechos orgánicos generados en el hogar pueden tener otra funcionalidad?'] || null,
         "¿La acumulación de desechos afectan a la salud de la población?": body.data?.['¿La acumulación de desechos afectan a la salud de la población?'] || null,
@@ -80,3 +80,4 @@ export default async function handler(req, res) {
     res.status(500).json({ error: 'Error procesando el webhook' });
   }
 }
+
