@@ -16,18 +16,26 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid Tally payload' });
     }
 
-    // Función para obtener el valor real de cualquier tipo de respuesta
+    // Función robusta para obtener texto visible de Tally
     const getValue = (label) => {
       const field = data.fields.find(f => f.label.toLowerCase() === label.toLowerCase());
       if (!field) return null;
 
-      // Texto o selección simple
-      if (field.value !== undefined) return field.value;
+      // Texto libre
+      if (field.value && typeof field.value === 'string') return field.value;
+
+      // Selección simple
+      if (field.choice && field.choice.label) return field.choice.label;
 
       // Selección múltiple
-      if (field.values && Array.isArray(field.values)) return field.values.join(', ');
+      if (field.choices && Array.isArray(field.choices)) {
+        return field.choices
+          .map(c => c.label || c.value)
+          .filter(v => v)
+          .join(', ');
+      }
 
-      return null;
+      return null; // fallback
     };
 
     // Mapear todas las respuestas del cuestionario
@@ -84,6 +92,7 @@ export default async function handler(req, res) {
       participaria_feria_emprendimientos_desechos: getValue('¿Participaría a una feria de emprendimientos comunitarios en base a desechos domiciliarios reutilizados?')
     };
 
+    // Insertar en Supabase
     const { data: inserted, error } = await supabase
       .from('Cuestionario_comportamiento_proambiental_autosustentabilidad')
       .insert([mappedData])
