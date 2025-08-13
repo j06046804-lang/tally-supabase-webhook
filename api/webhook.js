@@ -5,68 +5,79 @@ const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY
 );
 
+// Función para convertir nombres de Tally a columnas de la tabla
+function mapTallyToColumns(tallyData) {
+  return {
+    nombre_encuestador: tallyData['Nombre del encuestador'] || null,
+    nombre_encuestado: tallyData['Nombre del encuestado'] || null,
+    fecha: tallyData['Fecha'] || null,
+    hora: tallyData['Hora'] || null,
+    sexo: tallyData['Sexo'] || null,
+    edad: tallyData['Edad'] || null,
+    estado_civil: tallyData['Estado civil'] || null,
+    grupo: tallyData['Grupo'] || null,
+    subgrupo: tallyData['Subgrupo'] || null,
+    num_integrantes_familia: tallyData['Número de integrantes en la familia'] || null,
+    edad_0_10: tallyData['0 - 10 años'] || null,
+    edad_11_25: tallyData['11 - 25 años'] || null,
+    edad_26_50: tallyData['26 - 50 años'] || null,
+    edad_51_90: tallyData['51 - 90 años'] || null,
+    educacion_jefe_hogar: tallyData['Nivel de educación del jefe del hogar'] || null,
+    situacion_laboral_jefe_hogar: tallyData['Situación laboral del jefe del hogar'] || null,
+    ingreso_mensual_jefe_hogar: tallyData['Ingreso estimado mensual del jefe del hogar'] || null,
+    tipo_hogar: tallyData['Tipo de hogar'] || null,
+    conoce_desechos_solidos: tallyData['¿Conoce lo que son los desechos sólidos domiciliarios?'] || null,
+    cree_comportamiento_adecuado_manejo: tallyData['¿Cree usted que existe un comportamiento adecuado en el manejo de los desechos sólidos domiciliarios en la comunidad?'] || null,
+    separar_desechos_por_origen: tallyData['¿Se debe separar los desechos sólidos según su origen?'] || null,
+    clasificacion_correcta_desechos: tallyData['¿Es importante la correcta clasificación de los desechos sólidos orgánicos e inorgánicos en el hogar?'] || null,
+    comportamiento_comunidad_influye: tallyData['¿Cree que el comportamiento de la comunidad influye en la acumulación de desechos?'] || null,
+    dedica_tiempo_reducir_reutilizar_reciclar: tallyData['¿Dedica tiempo para reducir, reutilizar o reciclar?'] || null,
+    desechos_solidos_problema_comunidad: tallyData['¿Los desechos sólidos son un gran problema para su comunidad?'] || null,
+    preocupa_exceso_desechos: tallyData['¿Le preocupa el exceso de desechos sólidos domiciliarios?'] || null,
+    desechos_contaminan_ambiente: tallyData['¿Considera que los desechos contaminan el ambiente?'] || null,
+    afecta_emocionalmente_noticias_contaminacion: tallyData['¿Le afecta emocionalmente cuando escucha noticias sobre la contaminación?'] || null,
+    frustracion_falta_acciones_ambientales: tallyData['¿Siente frustración debido a la falta de acciones ambientales?'] || null,
+    importancia_planeta_futuras_generaciones: tallyData['¿Considera importante pensar en el tipo de planeta que dejamos a futuras generaciones?'] || null,
+    consciente_impacto_desechos_salud: tallyData['¿Es consciente del impacto de los desechos sólidos en la salud y el ambiente?'] || null,
+    investiga_temas_ambientales: tallyData['¿Investiga frecuentemente acerca de temas medio ambientales?'] || null,
+    consecuencias_acumulacion_desechos: tallyData['¿Conoce las consecuencias de la acumulación de los desechos sólidos domiciliarios?'] || null,
+    beneficios_reutilizar_residuo: tallyData['¿Conoce los beneficios de reutilizar un residuo domiciliario?'] || null,
+    falta_informacion_obstaculo_gestion: tallyData['¿La falta de información es un obstáculo para la correcta gestión de los residuos sólidos domiciliarios?'] || null,
+    desechos_organicos_funcionalidad: tallyData['¿Los desechos orgánicos generados en el hogar pueden tener otra funcionalidad?'] || null,
+    acumulacion_desechos_afecta_salud: tallyData['¿La acumulación de desechos afectan a la salud de la población?'] || null,
+    reduccion_reciclaje_reutilizacion_cuida_ambiente: tallyData['¿La reducción, reciclaje y la reutilización de los desechos sólidos puede cuidar al medio ambiente y a la vida silvestre?'] || null,
+    transformacion_desechos_nuevos_productos: tallyData['¿Cree que la transformación de desechos sólidos en nuevos productos puede contribuir significativamente a la reducción de la generación de desechos?'] || null,
+    necesita_info_educacion_ambiental: tallyData['¿Necesita más información acerca de educación ambiental?'] || null,
+    practica_separacion_reciclaje_ingreso: tallyData['¿En su hogar practica la separación de los desechos para el reciclaje y le representa algún ingreso?'] || null,
+    desechos_hogar_reutilizados: tallyData['¿Los desechos sólidos generados en el hogar pueden ser reutilizados para una nueva función o creación de un producto?'] || null,
+    manejo_adecuado_desechos_aporta_desarrollo: tallyData['¿Cree que el manejo adecuado de los desechos sólidos domiciliarios podría aportar al desarrollo económico comunitario?'] || null,
+    emprendimientos_reutilizacion_aportan_economia: tallyData['¿Los emprendimientos en base a la reutilización de los desechos aporta a su economía?'] || null,
+    manejo_adecuado_desechos_oportunidad_emprendimiento: tallyData['¿El manejo adecuado de los desechos sólidos domiciliarios ofrece oportunidades para el emprendimiento?'] || null,
+    reducir_residuos_eventos_concientizacion: tallyData['¿Es posible reducir la generación de residuos sólidos domiciliarios por medio de eventos de concientización?'] || null,
+    participaria_talleres_buenas_practicas: tallyData['¿Participaría en talleres de buenas prácticas y capacitaciones para el correcto manejo de los desechos sólidos domiciliarios?'] || null,
+    manejo_adecuado_desechos_impacto_ambiente: tallyData['¿El manejo adecuado de los desechos sólidos domiciliarios puede tener un impacto significativo al medio ambiente?'] || null,
+    dispuesto_participar_emprendimiento_desechos: tallyData['¿Está dispuesto a participar en un emprendimiento en base al uso de los desechos sólidos?'] || null,
+    participaria_feria_emprendimientos_desechos: tallyData['¿Participaría a una feria de emprendimientos comunitarios en base a desechos domiciliarios reutilizados?'] || null
+  };
+}
+
 export default async function handler(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Método no permitido' });
   }
 
   try {
-    const body = req.body.data || {}; // Aseguramos que body.data exista
+    const body = req.body;
+
+    if (!body.data) {
+      return res.status(400).json({ error: 'No se encontró data en el body' });
+    }
+
+    const mappedData = mapTallyToColumns(body.data);
 
     const { data, error } = await supabase
       .from('Cuestionario_comportamiento_proambiental_autosustentabilidad')
-      .insert([{
-        nombre_encuestador: body.nombre_encuestador || null,
-        nombre_encuestado: body.nombre_encuestado || null,
-        fecha: body.fecha || null,
-        hora: body.hora || null,
-        sexo: body.sexo || null,
-        edad: body.edad || null,
-        estado_civil: body.estado_civil || null,
-        grupo: body.grupo || null,
-        subgrupo: body.subgrupo || null,
-        num_integrantes_familia: body.num_integrantes_familia || null,
-        edad_0_10: body.edad_0_10 || null,
-        edad_11_25: body.edad_11_25 || null,
-        edad_26_50: body.edad_26_50 || null,
-        edad_51_90: body.edad_51_90 || null,
-        educacion_jefe_hogar: body.educacion_jefe_hogar || null,
-        situacion_laboral_jefe_hogar: body.situacion_laboral_jefe_hogar || null,
-        ingreso_mensual_jefe_hogar: body.ingreso_mensual_jefe_hogar || null,
-        tipo_hogar: body.tipo_hogar || null,
-        conoce_desechos_solidos: body.conoce_desechos_solidos || null,
-        cree_comportamiento_adecuado_manejo: body.cree_comportamiento_adecuado_manejo || null,
-        separar_desechos_por_origen: body.separar_desechos_por_origen || null,
-        clasificacion_correcta_desechos: body.clasificacion_correcta_desechos || null,
-        comportamiento_comunidad_influye: body.comportamiento_comunidad_influye || null,
-        dedica_tiempo_reducir_reutilizar_reciclar: body.dedica_tiempo_reducir_reutilizar_reciclar || null,
-        desechos_solidos_problema_comunidad: body.desechos_solidos_problema_comunidad || null,
-        preocupa_exceso_desechos: body.preocupa_exceso_desechos || null,
-        desechos_contaminan_ambiente: body.desechos_contaminan_ambiente || null,
-        afecta_emocionalmente_noticias_contaminacion: body.afecta_emocionalmente_noticias_contaminacion || null,
-        frustracion_falta_acciones_ambientales: body.frustracion_falta_acciones_ambientales || null,
-        importancia_planeta_futuras_generaciones: body.importancia_planeta_futuras_generaciones || null,
-        consciente_impacto_desechos_salud: body.consciente_impacto_desechos_salud || null,
-        investiga_temas_ambientales: body.investiga_temas_ambientales || null,
-        consecuencias_acumulacion_desechos: body.consecuencias_acumulacion_desechos || null,
-        beneficios_reutilizar_residuo: body.beneficios_reutilizar_residuo || null,
-        falta_informacion_obstaculo_gestion: body.falta_informacion_obstaculo_gestion || null,
-        desechos_organicos_funcionalidad: body.desechos_organicos_funcionalidad || null,
-        acumulacion_desechos_afecta_salud: body.acumulacion_desechos_afecta_salud || null,
-        reduccion_reciclaje_reutilizacion_cuida_ambiente: body.reduccion_reciclaje_reutilizacion_cuida_ambiente || null,
-        transformacion_desechos_nuevos_productos: body.transformacion_desechos_nuevos_productos || null,
-        necesita_info_educacion_ambiental: body.necesita_info_educacion_ambiental || null,
-        practica_separacion_reciclaje_ingreso: body.practica_separacion_reciclaje_ingreso || null,
-        desechos_hogar_reutilizados: body.desechos_hogar_reutilizados || null,
-        manejo_adecuado_desechos_aporta_desarrollo: body.manejo_adecuado_desechos_aporta_desarrollo || null,
-        emprendimientos_reutilizacion_aportan_economia: body.emprendimientos_reutilizacion_aportan_economia || null,
-        manejo_adecuado_desechos_oportunidad_emprendimiento: body.manejo_adecuado_desechos_oportunidad_emprendimiento || null,
-        reducir_residuos_eventos_concientizacion: body.reducir_residuos_eventos_concientizacion || null,
-        participaria_talleres_buenas_practicas: body.participaria_talleres_buenas_practicas || null,
-        manejo_adecuado_desechos_impacto_ambiente: body.manejo_adecuado_desechos_impacto_ambiente || null,
-        dispuesto_participar_emprendimiento_desechos: body.dispuesto_participar_emprendimiento_desechos || null,
-        participaria_feria_emprendimientos_desechos: body.participaria_feria_emprendimientos_desechos || null
-      }]);
+      .insert([mappedData]);
 
     if (error) {
       console.error(error);
