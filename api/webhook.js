@@ -16,35 +16,21 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid Tally payload' });
     }
 
-    // Función mejorada para obtener valor real
+    // Función para obtener el valor real de cualquier tipo de respuesta
     const getValue = (label) => {
       const field = data.fields.find(f => f.label.toLowerCase() === label.toLowerCase());
       if (!field) return null;
 
-      // Texto libre
-      if (field.value !== undefined && typeof field.value === 'string') return field.value;
-
-      // Selección simple
-      if (field.choice) {
-        return field.choice.label || field.choice.value || null;
-      }
+      // Texto o selección simple
+      if (field.value !== undefined) return field.value;
 
       // Selección múltiple
-      if (field.choices && Array.isArray(field.choices)) {
-        return field.choices
-          .map(c => c.label || c.value)
-          .filter(v => v)
-          .join(', ');
-      }
-
-      // Otra forma que envía Tally: choices.labels
-      if (field.choices?.labels) {
-        return field.choices.labels.join(', ');
-      }
+      if (field.values && Array.isArray(field.values)) return field.values.join(', ');
 
       return null;
     };
 
+    // Mapear todas las respuestas del cuestionario
     const mappedData = {
       nombre_encuestador: getValue('Nombre del encuestador'),
       nombre_encuestado: getValue('Nombre del encuestado'),
@@ -105,12 +91,12 @@ export default async function handler(req, res) {
 
     if (error) throw error;
 
-    console.log('Data inserted successfully:', inserted);
+    console.log('Datos insertados correctamente:', inserted);
 
     return res.status(200).json({ message: 'Datos guardados', data: inserted });
 
   } catch (err) {
-    console.error('Error inserting data:', err);
+    console.error('Error al insertar los datos:', err);
     return res.status(500).json({ error: err.message });
   }
 }
