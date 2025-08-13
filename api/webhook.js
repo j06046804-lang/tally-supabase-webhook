@@ -16,10 +16,15 @@ export default async function handler(req, res) {
       return res.status(400).json({ error: 'Invalid Tally payload' });
     }
 
-    // Función para obtener el valor por etiqueta (label)
+    // Función para obtener el valor por label, incluyendo selección simple y múltiple
     const getValue = (label) => {
       const field = data.fields.find(f => f.label.toLowerCase() === label.toLowerCase());
-      return field ? field.value : null;
+      if (!field) return null;
+
+      if (field.value !== undefined) return field.value; // texto
+      if (field.choice?.label) return field.choice.label; // selección simple
+      if (field.choices?.labels) return field.choices.labels.join(', '); // selección múltiple
+      return null;
     };
 
     const mappedData = {
